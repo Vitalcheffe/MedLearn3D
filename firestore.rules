@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - displayName: string (optional)
+    //   - email: string (required)
+    //   - xp: number (required)
+    //   - level: number (required)
+    //   - badges: list (optional)
+    //   - lastActive: string (optional)
+    //
+    // Collection: quizResults
+    // Document ID: {resultId}
+    // Fields:
+    //   - uid: string (required)
+    //   - topic: string (required)
+    //   - score: number (required)
+    //   - totalQuestions: number (required)
+    //   - timestamp: string (required)
+    //   - difficulty: string (optional)
+    //
+    // Collection: learningProgress
+    // Document ID: {progressId}
+    // Fields:
+    //   - uid: string (required)
+    //   - module: string (required)
+    //   - progress: number (required)
+    //   - lastAccessed: string (required)
+    //
+    // Collection: activities
+    // Document ID: {activityId}
+    // Fields:
+    //   - uid: string (required)
+    //   - type: string (required)
+    //   - description: string (required)
+    //   - timestamp: string (required)
+    //   - xpGained: number (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "amineharchelkorane5@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'xp', 'level']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             isValidEmail(data.email) &&
+             data.xp is number && data.xp >= 0 &&
+             data.level is number && data.level >= 1;
+    }
+
+    function isValidQuizResult(data) {
+      return hasRequiredFields(['uid', 'topic', 'score', 'totalQuestions', 'timestamp']) &&
+             data.uid == request.auth.uid &&
+             data.topic is string && data.topic.size() > 0 &&
+             data.score is number && data.score >= 0 &&
+             data.totalQuestions is number && data.totalQuestions > 0 &&
+             isValidDateString(data.timestamp);
+    }
+
+    function isValidLearningProgress(data) {
+      return hasRequiredFields(['uid', 'module', 'progress', 'lastAccessed']) &&
+             data.uid == request.auth.uid &&
+             data.module is string && data.module.size() > 0 &&
+             data.progress is number && data.progress >= 0 && data.progress <= 100 &&
+             isValidDateString(data.lastAccessed);
+    }
+
+    function isValidActivity(data) {
+      return hasRequiredFields(['uid', 'type', 'description', 'timestamp']) &&
+             data.uid == request.auth.uid &&
+             data.type is string && data.type.size() > 0 &&
+             data.description is string && data.description.size() > 0 &&
+             isValidDateString(data.timestamp);
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && isValidUser(request.resource.data) && (!('role' in request.resource.data) || request.resource.data.role == 'user');
+      allow update: if isOwner(uid) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /quizResults/{resultId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidQuizResult(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /learningProgress/{progressId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidLearningProgress(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin()) && isValidLearningProgress(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /activities/{activityId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidActivity(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Default Deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "MedLearn 3D - Interactive Medical Education",
+  "description": "Plateforme éducative 3D interactive de pointe pour les étudiants en médecine. Visualisations anatomiques détaillées (10 systèmes), modules spécialisés (Odontologie, Cardiologie, Neurologie), et quiz immersifs.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}

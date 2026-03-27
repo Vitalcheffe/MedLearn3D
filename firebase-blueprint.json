@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user statistics, level, and XP.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique identifier for the user." },
+        "displayName": { "type": "string", "description": "The display name of the user." },
+        "email": { "type": "string", "description": "The email address of the user." },
+        "xp": { "type": "integer", "description": "Total experience points gained." },
+        "level": { "type": "integer", "description": "Current level of the user." },
+        "badges": { "type": "array", "items": { "type": "string" }, "description": "List of badges earned." },
+        "lastActive": { "type": "string", "format": "date-time", "description": "Last time the user was active." }
+      },
+      "required": ["uid", "email", "xp", "level"]
+    },
+    "QuizResult": {
+      "title": "Quiz Result",
+      "description": "Stores the outcome of a completed quiz.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The user who took the quiz." },
+        "topic": { "type": "string", "description": "The topic of the quiz." },
+        "score": { "type": "integer", "description": "Number of correct answers." },
+        "totalQuestions": { "type": "integer", "description": "Total number of questions in the quiz." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the quiz was completed." },
+        "difficulty": { "type": "string", "description": "The difficulty level of the quiz." }
+      },
+      "required": ["uid", "topic", "score", "totalQuestions", "timestamp"]
+    },
+    "LearningProgress": {
+      "title": "Learning Progress",
+      "description": "Tracks progress in specific medical modules.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The user." },
+        "module": { "type": "string", "description": "The module name (e.g., Cardiology)." },
+        "progress": { "type": "integer", "description": "Progress percentage (0-100)." },
+        "lastAccessed": { "type": "string", "format": "date-time", "description": "Last time this module was viewed." }
+      },
+      "required": ["uid", "module", "progress", "lastAccessed"]
+    },
+    "Activity": {
+      "title": "User Activity",
+      "description": "Log of recent user actions for the activity feed.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The user." },
+        "type": { "type": "string", "description": "Type of activity (e.g., 'quiz_completed', 'module_explored')." },
+        "description": { "type": "string", "description": "Human-readable description of the activity." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the activity occurred." },
+        "xpGained": { "type": "integer", "description": "XP gained from this activity." }
+      },
+      "required": ["uid", "type", "description", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profile documents."
+    },
+    "/quizResults/{resultId}": {
+      "schema": "QuizResult",
+      "description": "History of all quizzes taken."
+    },
+    "/learningProgress/{progressId}": {
+      "schema": "LearningProgress",
+      "description": "Progress tracking per module."
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Log of recent activities."
+    }
+  }
+}
